@@ -89,7 +89,7 @@ When the next user arrives, Sarah's LP is popped off the queue and sent to her w
 
 This concludes the simplest implementation of the Liquid Queue that achieves the desired properties.
 
-# Implications
+## Implications
 The time an LP batch spends in the queue is proportional to the popularity of the queue. The only upper limit to the velocity of the queue is the gas block constraints and the network speed. Theoretically, a user could purchase LP and have their batch pushed out in the span of one block. While the return on investment (ROI) is more or less constant, the faster the queue moves, the higher the implied annual percentage yield (APY). This should act as an incentive to marginal users, further accelerating the queue, creating a positive feedback loop. Similarly, if the popularity of the queue wanes, the speed declines until, at the extreme, it halts. Since diffusion pricing creates an arbitrage opportunity for traders of SCX on Uniswap, if the queue clears too quickly, the LP holder could unwind their LP and reduce the liquidity depth of possible arbitrage trades before external traders have had a chance to act on the price tilting. When this happens, the net loss to the system is reflected in EYE or SCX handed out by the Reward Contract. So there exists an optimal queue velocity such that the LP is locked long enough for traders to mint SCX on Behodler and sell on Uniswap on the one hand but not locked too long that the queue becomes undesirably slow for new entrants.
 
 ## Optimizing the Queue
