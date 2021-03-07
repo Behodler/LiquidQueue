@@ -58,7 +58,23 @@ During phase 1, three liquidity pools on Uniswap will be offered to reward liqui
 ### Tilting
 To be precise in our use of language, when we say SCX is tilted, we are using shorthand to say that we mint LP out of SCX and a second token in a ratio that implies a higher price for SCX than is currently recorded by that LP. The following table illustrates the reward LP token in the middle column and the direction of tilting
 
-![alt text](./diagrams/table.jpg "Title")
+<table>
+<tr>
+    <th>Input Token</th><th>LP Reward</th><th>Tilted Token</th>
+</tr>
+<tr>
+    <td>DAI</td><td>EYE/DAI</td><td>EYE</td>
+</tr>
+<tr>
+    <td>ETH</td><td>SCX/ETH</td><td>SCX</td>
+</tr>
+<tr>
+    <td>SCX</td><td>EYE/SCX</td><td>SCX</td>
+</tr>
+<tr>
+    <td>EYE</td><td>EYE/SCX</td><td>SCX</td>
+</tr>
+</table>
 
 The above setup ensures that EYE is being unambiguously tilted in the most popular unit of account, the US dollar. This ensures that SCX tilting is not at the expense of EYE. For the instances where ETH or EYE is provided by the miner, this is subject to the availability of SCX from fee revenue.
 
