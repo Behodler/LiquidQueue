@@ -2,7 +2,7 @@
 by Justin Goro
 
 # Introduction
-We explore the problems with traditional liquidity mining in Ethereum and offer up an alternative, the Liquid Queue, to ameliorate these and provide a number of unexpected benefits. The first application of Liquid Queue will be on the <a target ="_blank" href = "https://behodler.io">Behodler AMM</a> and the initial reference AMM will be <a href = "https://uniswap.org/" target ="_blank">Uniswap</a>.
+We explore the problems with traditional liquidity mining in Ethereum and offer up an alternative, the Liquid Queue, to ameliorate these and provide a number of unexpected benefits. The first application of Liquid Queue will be on the <a target="_blank" href = "https://behodler.io">Behodler AMM</a> and the initial reference AMM will be <a href = "https://uniswap.org/" target="_blank">Uniswap</a>.
 
 *keywords: liquid queue, liquidity, mining, diffusion, Ethereum, Uniswap, Behodler*
 
