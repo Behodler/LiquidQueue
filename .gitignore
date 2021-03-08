@@ -1,3 +1,9 @@
 *.pdf
 *.txt
-*.txt.sol
+/reference/
+/node_modules/
+node_modules
+
+#Hardhat files
+cache
+artifacts
