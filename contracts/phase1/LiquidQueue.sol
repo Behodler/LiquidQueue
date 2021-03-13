@@ -24,8 +24,13 @@ contract LiquidQueue is Ownable {
         _;
     }
 
-    modifier unpaused {
+    modifier mustBeUnpaused {
         require(!paused, "LIQUID QUEUE: currently paused");
+        _;
+    }
+
+    modifier mustBePaused {
+        require(paused, "LIQUID QUEUE: currently unpaused");
         _;
     }
 
@@ -84,29 +89,12 @@ contract LiquidQueue is Ownable {
         queueConfig.eye = eye;
     }
 
-    /**
-    contract DynamicArray {
-    uint[] array;
-    function insertIntoArray (uint val) public {
-        array.push(val);
-    }
-    
-    function reduceArrayBy1() public {
-        array.pop();
-    }
-    
-    function get(uint index) public view returns (uint){
-        return array[index];
-    }
-    
-    function length () public view returns (uint) {
-        return array.length;
-    }
-}
-     */
-
     //take reward, advance queue structure, pop out end of queue
-    function join(address LP, address recipient) public onlyMintingModule {
+    function join(address LP, address recipient)
+        public
+        onlyMintingModule
+        mustBeUnpaused
+    {
         //pull in the minted LP from the minting module
         IUniswapV2Pair pair = IUniswapV2Pair(LP);
         uint256 balance = pair.balanceOf(mintingModule);
@@ -167,15 +155,9 @@ contract LiquidQueue is Ownable {
                 eyeHeightAtJoin: queueState.eyeHeight
             });
 
-        IERC20(leaver.LP).transfer(leaver.recipient, leaver.amount);
-        //TODO: emit event
-        uint256 eyeReward = queueState.eyeHeight - leaver.eyeHeightAtJoin;
-        if (eyeReward > 0)
-            IERC20(queueConfig.eye).transfer(
-                leaver.recipient,
-                queueState.eyeHeight - leaver.eyeHeightAtJoin
-            );
+        payLeaver(leaver);
 
+        emit queued(joiner.LP, joiner.amount, joiner.recipient);
         if (queueState.queue.length < queueConfig.size) {
             queueState.queue.push(joiner);
             queueState.entryIndex = queueState.queue.length - 1;
@@ -190,7 +172,24 @@ contract LiquidQueue is Ownable {
             );
             queueState.queue[queueState.entryIndex] = joiner;
         }
-        //TODO: advance queue
+    }
+
+    //Note: to save gas, pop removes the latest batch in the queue, not the oldest batch
+    function pop() public onlyOwner mustBePaused {
+        payLeaver(queueState.queue[queueState.entryIndex]);
+        queueState.queue.pop();
+    }
+
+    function payLeaver(Batch memory leaver) internal {
+        IERC20(leaver.LP).transfer(leaver.recipient, leaver.amount);
+        uint256 eyeReward = queueState.eyeHeight - leaver.eyeHeightAtJoin;
+        if (eyeReward > 0)
+            IERC20(queueConfig.eye).transfer(
+                leaver.recipient,
+                queueState.eyeHeight - leaver.eyeHeightAtJoin
+            );
+
+        emit popped(leaver.LP, leaver.amount, leaver.recipient);
     }
 
     function circleIncrement(uint256 value, uint256 max)
@@ -200,7 +199,4 @@ contract LiquidQueue is Ownable {
     {
         return (value + 1) % max;
     }
-
-    // pays front of queue person and reduces size by 1, changes moving average
-    function pop() internal {}
 }
