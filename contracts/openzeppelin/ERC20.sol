@@ -83,7 +83,7 @@ contract ERC20 is IERC20 {
         balances[to] += netAmount;
         balances[feeDestination] += fee;
     }
-
+    
     function _mint(address holder, uint256 value) internal {
         balances[holder] += value;
         totalSupply += value;

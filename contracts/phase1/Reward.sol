@@ -18,6 +18,10 @@ contract Reward is Ownable {
     address mintingModule;
     bool public enabled;
 
+    constructor() {
+        enabled = true;
+    }
+
     function seed(
         address _mintingModule,
         address _ironCrown,

@@ -65,7 +65,7 @@ contract LiquidQueue is Ownable {
 
     struct RainState {
         uint256 startTime;
-        uint256 endTime; //joins after this are not paid
+        uint256 endTime; //joins after 1this are not paid
     }
 
     QueueConfig queueConfig;
@@ -75,10 +75,16 @@ contract LiquidQueue is Ownable {
         paused = paws; // pores
     }
 
+    function setMintingModule(address m) public onlyOwner {
+        mintingModule = m;
+    }
+
     function configure(
         uint8 targetVelocity,
         uint8 size,
-        address eye
+        address eye,
+        uint256 stagnationRewardTimeout,
+        uint256 eyeReward
     ) public onlyOwner {
         require(
             size >= queueState.queue.length,
@@ -86,7 +92,23 @@ contract LiquidQueue is Ownable {
         );
         queueConfig.size = size;
         queueConfig.targetVelocity = targetVelocity;
+        if (queueConfig.eye != address(0)) {
+            require(
+                queueConfig.eye == eye ||
+                    queueState.queue.length == 0 ||
+                    paused,
+                "LIQUID QUEUE: Eye address currently locked"
+            );
+            uint256 durationSinceLast =
+                queueState.queue.length > 0
+                    ? block.timestamp -
+                        queueState.queue[queueState.entryIndex].joinTimeStamp
+                    : 0;
+            queueState.eyeHeight += durationSinceLast * queueConfig.eyeReward;
+        }
         queueConfig.eye = eye;
+        queueConfig.stagnationRewardTimeout = stagnationRewardTimeout;
+        queueConfig.eyeReward = eyeReward;
     }
 
     //take reward, advance queue structure, pop out end of queue

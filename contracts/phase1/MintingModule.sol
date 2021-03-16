@@ -7,18 +7,31 @@ import "../uniswapv2/interfaces/IUniswapV2Factory.sol";
 import "../uniswapv2/interfaces/IUniswapV2Router02.sol";
 import "../uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "../uniswapv2/WETH.sol";
+import "../uniswapv2/libraries/UniswapV2Library.sol";
 
 abstract contract LiquidQueueLike {
     function join(address LP, address recipient) public virtual;
 }
 
+abstract contract RewardLike {
+    function requestReward(address token, uint256 value) public virtual;
+}
+
 contract MintingModule is Ownable {
     using SafeMath for uint256;
+
+    struct UniswapValues {
+        address token0;
+        address token1;
+        uint256 reserveA;
+        uint256 reserveB;
+        IUniswapV2Pair pair;
+    }
 
     IUniswapV2Factory uniswapFactory;
     IUniswapV2Router02 uniswapRouter;
 
-    address rewardContract;
+    RewardLike rewardContract;
     address liquidQueue;
     bool locked;
     uint8 tiltPercentage;
@@ -34,12 +47,12 @@ contract MintingModule is Ownable {
 
     function seed(
         address factory,
-        address reward,
         address router,
+        address reward,
         uint8 _tiltPercentage
     ) public onlyOwner {
         uniswapFactory = IUniswapV2Factory(factory);
-        rewardContract = reward;
+        rewardContract = RewardLike(reward);
         uniswapRouter = IUniswapV2Router02(router);
         tiltPercentage = _tiltPercentage;
     }
@@ -75,6 +88,7 @@ contract MintingModule is Ownable {
         }
     }
 
+    //Entry point for an external user into the Liquid Queue
     function purchaseLP(address inputToken, uint256 amount)
         public
         payable
@@ -96,14 +110,6 @@ contract MintingModule is Ownable {
             IERC20(inputToken).transferFrom(msg.sender, address(this), amount);
         }
         purchaseLPFor(inputToken, amount, msg.sender);
-    }
-
-    struct UniswapValues {
-        address token0;
-        address token1;
-        uint256 reserveA;
-        uint256 reserveB;
-        IUniswapV2Pair pair;
     }
 
     function purchaseLPFor(
@@ -145,6 +151,7 @@ contract MintingModule is Ownable {
                 : 100 - tiltPercentage;
 
         uint256 outputAmount = expectedOutputToken.mul(tiltAdjustment).div(100);
+        rewardContract.requestReward(outputToken, outputAmount);
 
         IERC20(inputToken).transfer(address(VARS.pair), amount);
         IERC20(outputToken).transfer(address(VARS.pair), outputAmount);
@@ -153,5 +160,13 @@ contract MintingModule is Ownable {
         VARS.pair.approve(liquidQueue, uint256(-1));
 
         LiquidQueueLike(liquidQueue).join(address(VARS.pair), recipient);
+    }
+
+        function sortTokens(address tokenA, address tokenB)
+        public
+        pure
+        returns (address, address)
+    {
+        return UniswapV2Library.sortTokens(tokenA, tokenB);
     }
 }
