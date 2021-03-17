@@ -22,6 +22,8 @@ contract Reward is Ownable {
         enabled = true;
     }
 
+    receive() external payable {}
+
     function seed(
         address _mintingModule,
         address _ironCrown,
