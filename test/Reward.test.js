@@ -2,43 +2,54 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Reward", function () {
-  let owner, mintingModule
+  let owner, mintingModule, MockERC20Factory, reward, eye, scx, ironCrown
   beforeEach(async function () {
     [owner, mintingModule] = await ethers.getSigners();
     const Reward = await ethers.getContractFactory("Reward")
-    const reward = await Reward.deploy();
-    const MockERC20 = await ethers.getContractFactory("ERC20")
-    const mockSCX = await MockERC20.deploy("SCX", "SCX", reward.address, true);
+    reward = await Reward.deploy();
+    MockERC20Factory = await ethers.getContractFactory("MockToken")
+    scx = await MockERC20Factory.deploy("SCX", "SCX", reward.address, true);
 
-    const mockEYE = await MockERC20.deploy("EYE", "EYE", "0x0000000000000000000000000000000000000000", false)
+    eye = await MockERC20Factory.deploy("EYE", "EYE", "0x0000000000000000000000000000000000000000", false)
     const IronCrown = await ethers.getContractFactory("MockIronCrown")
-    const ironCrown = await IronCrown.deploy(mockSCX.address, reward.address)
+    ironCrown = await IronCrown.deploy(scx.address, reward.address)
 
-    await reward.seed(mintingModule.address, ironCrown.address, mockEYE.address, mockSCX.address)
+    await reward.seed(mintingModule.address, ironCrown.address, eye.address, scx.address)
   })
 
   it("canReward fails on invalid token and returns false on empty valid token", async function () {
+    const invalidToken = await MockERC20Factory.deploy("AYE", "AYE", "0x0000000000000000000000000000000000000000", false)
+    await expect(reward.canReward(invalidToken.address, 10))
+      .to.be.revertedWith("LIQUID QUEUE: invalid token")
 
-    // const Greeter = await ethers.getContractFactory("Greeter");
-    // const greeter = await Greeter.deploy("Hello, world!");
-
-    // await greeter.deployed();
-    // expect(await greeter.greet()).to.equal("Hello, world!");
-
-    // await greeter.setGreeting("Hola, mundo!");
-    // expect(await greeter.greet()).to.equal("Hola, mundo!");
+    const canRewardEye = await reward.canReward(eye.address, 1)
+    expect(canRewardEye).to.be.false
   });
 
   it("canReward succeeds on positive token balance of valid token", async function () {
+    await eye.mint(reward.address, 1)
+    const canRewardEye = await reward.canReward(eye.address, 1)
+    expect(canRewardEye).to.be.true
   });
 
   //await greeter.connect(addr1).setGreeting("Hallo, Erde!");
   it("requestReward can only be called from minting module", async function () {
+    await eye.mint(reward.address, 1)
+    await expect(reward.requestReward(eye.address, 1)).to.be.revertedWith("LIQUID QUEUE: only minting module")
   });
 
-  it("request reward drains ironCrown and transfers to minting module", async function () { })
 
   it("withdraw only possible when disabled", async function () {
+    await scx.mint(reward.address, 10000)
+    expect(await scx.balanceOf(owner.address)).to.equal(0)
 
+    await expect(reward.withdraw(scx.address)).to.be.revertedWith('LIQUID QUEUE: Reward enabled status wrong')
+    await reward.toggle(false)
+
+    await reward.withdraw(scx.address)
+    expect(await scx.balanceOf(owner.address)).to.equal(9800)//fee on transfer
+
+    await reward.toggle(true)
+    await expect(reward.withdraw(scx.address)).to.be.revertedWith('LIQUID QUEUE: Reward enabled status wrong')
   })
 });

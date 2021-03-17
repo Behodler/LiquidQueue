@@ -1,8 +1,8 @@
 const { expect, assert } = require("chai");
-const { ethers, waffle } = require("hardhat");
+const { ethers } = require("hardhat");
 //TODO set up uniswap
 describe("MintingModule", function () {
-    let owner, secondPerson, feeSetter, mintingModule, uniswapRouter, MockToken, scx, eye, dai, uniSwapFactory, reward, weth
+    let owner, secondPerson, feeSetter, mintingModule, uniswapRouter, MockToken, scx, eye, dai, uniSwapFactory, reward, weth, ironCrown
     const zero = '0x0000000000000000000000000000000000000000'
     beforeEach(async function () {
         [owner, secondPerson, feeSetter] = await ethers.getSigners();
@@ -22,7 +22,7 @@ describe("MintingModule", function () {
         dai = await MockToken.deploy('DAI', 'dai', zero, false)
 
         const IronCrownFactory = await ethers.getContractFactory("MockIronCrown")
-        const ironCrown = await IronCrownFactory.deploy(scx.address, reward.address)
+        ironCrown = await IronCrownFactory.deploy(scx.address, reward.address)
 
         const LiquidQueueFactory = await ethers.getContractFactory('MockLiquidQueue')
         const liquidQueue = await LiquidQueueFactory.deploy()
@@ -264,5 +264,22 @@ describe("MintingModule", function () {
         const actualTiltIncrease = expectedSCXOutBefore.sub(expectedSCXOutAfter)
 
         expect(actualTiltIncrease).to.equal(expectedTiltIncrease)
+    })
+
+    it("request reward drains ironCrown and transfers to reward", async function () {
+        await scx.mint(ironCrown.address, 270000)
+        expect(await scx.balanceOf(reward.address)).to.equal(0)
+
+        const pairAddress = await uniSwapFactory.getPair(scx.address, eye.address)
+        const pair = await ethers.getContractAt('UniswapV2Pair', pairAddress)
+        await scx.mint(pairAddress, '100000000000000000000')
+        await eye.mint(pairAddress, '10000000000000000000')
+        await pair.mint(secondPerson.address)
+
+        await eye.mint(owner.address, 10000)
+        await eye.approve(mintingModule.address, 10000)
+        await mintingModule.purchaseLP(eye.address, 1)
+        console.log('scx balance of reward: ' + await scx.balanceOf(reward.address))
+        expect(await scx.balanceOf(reward.address)).to.equal(269993)
     })
 })

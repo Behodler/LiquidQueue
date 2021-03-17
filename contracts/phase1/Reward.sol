@@ -56,7 +56,7 @@ contract Reward is Ownable {
         returns (bool)
     {
         uint256 balance = IERC20(token).balanceOf(address(this));
-        return (balance > amount);
+        return (balance >= amount);
     }
 
     function requestReward(address token, uint256 value)

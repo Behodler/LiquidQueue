@@ -54,6 +54,10 @@ contract MintingModule is Ownable {
         uniswapFactory = IUniswapV2Factory(factory);
         rewardContract = RewardLike(reward);
         uniswapRouter = IUniswapV2Router02(router);
+        require(
+            tiltPercentage < 100,
+            "LIQUID QUEUE: tilt percentage between 1 and 100"
+        );
         tiltPercentage = _tiltPercentage;
     }
 
@@ -162,7 +166,7 @@ contract MintingModule is Ownable {
         LiquidQueueLike(liquidQueue).join(address(VARS.pair), recipient);
     }
 
-        function sortTokens(address tokenA, address tokenB)
+    function sortTokens(address tokenA, address tokenB)
         public
         pure
         returns (address, address)
