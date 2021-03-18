@@ -1,6 +1,5 @@
 const { expect, assert } = require("chai");
 const { ethers } = require("hardhat");
-//TODO set up uniswap
 describe("MintingModule", function () {
     let owner, secondPerson, feeSetter, mintingModule, uniswapRouter, MockToken, scx, eye, dai, uniSwapFactory, reward, weth, ironCrown
     const zero = '0x0000000000000000000000000000000000000000'

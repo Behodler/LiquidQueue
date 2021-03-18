@@ -61,6 +61,7 @@ contract LiquidQueue is Ownable {
         address eye;
         uint256 stagnationRewardTimeout;
         uint256 eyeReward;
+        bool LPburnDisabled; // if behodler's listing of LPs is enough incentive to not unwind then no need for LP burning
     }
 
     struct RainState {
@@ -84,7 +85,8 @@ contract LiquidQueue is Ownable {
         uint8 size,
         address eye,
         uint256 stagnationRewardTimeout,
-        uint256 eyeReward
+        uint256 eyeReward,
+        bool LPburnDisabled
     ) public onlyOwner {
         require(
             size >= queueState.queue.length,
@@ -109,6 +111,7 @@ contract LiquidQueue is Ownable {
         queueConfig.eye = eye;
         queueConfig.stagnationRewardTimeout = stagnationRewardTimeout;
         queueConfig.eyeReward = eyeReward;
+        queueConfig.LPburnDisabled;
     }
 
     //take reward, advance queue structure, pop out end of queue
@@ -120,9 +123,10 @@ contract LiquidQueue is Ownable {
         //pull in the minted LP from the minting module
         IUniswapV2Pair pair = IUniswapV2Pair(LP);
         uint256 balance = pair.balanceOf(mintingModule);
+        require(balance>0,"LIQUID QUEUE: Nothing to queue");
         pair.transferFrom(mintingModule, address(this), balance);
 
-        //calculate current velocity. If it was low, turn off LP burn, otherwise set high.
+        //calculate current velocity. If it is high, turn off LP burn, otherwise set high.
         uint256 newEntryTimeStamp = block.timestamp;
         uint256 durationSinceLast = 0;
         if (queueState.queue.length > 0) {
@@ -144,6 +148,7 @@ contract LiquidQueue is Ownable {
             }
         }
 
+        //if eye rewards are active but velocity picks up, disable eye rewards
         if (queueState.eyeActive) {
             queueState.eyeHeight += durationSinceLast / queueConfig.eyeReward;
             if (queueState.velocity > queueConfig.targetVelocity) {
@@ -152,6 +157,7 @@ contract LiquidQueue is Ownable {
             }
         }
 
+        //if velocity falls below target, after timeout set eye rewards to active
         if (
             queueState.velocity < queueConfig.targetVelocity &&
             !queueState.eyeActive
@@ -171,7 +177,9 @@ contract LiquidQueue is Ownable {
             Batch({
                 recipient: recipient,
                 LP: LP,
-                amount: (balance * (queueState.burnRatio)) / 100,
+                amount: queueConfig.LPburnDisabled
+                    ? balance
+                    : (balance * (queueState.burnRatio)) / 100,
                 joinTimeStamp: block.timestamp,
                 durationSinceLast: durationSinceLast,
                 eyeHeightAtJoin: queueState.eyeHeight
