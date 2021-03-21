@@ -3,6 +3,7 @@ pragma solidity ^0.7.6;
 import "../uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "../openzeppelin/Ownable.sol";
 import "../openzeppelin/IERC20.sol";
+import "../facades/RewardLike.sol";
 
 /*
 RULES:
@@ -15,6 +16,7 @@ contract LiquidQueue is Ownable {
     bool public paused; // only for alpha queue.
     event queued(address indexed lp, uint256 amount, address holder);
     event popped(address indexed lp, uint256 amount, address holder);
+    RewardLike rewardContract;
 
     modifier onlyMintingModule {
         require(
@@ -56,7 +58,7 @@ contract LiquidQueue is Ownable {
     }
 
     struct QueueConfig {
-        uint8 targetVelocity;
+        uint24 targetVelocity;
         uint8 size;
         address eye;
         uint256 stagnationRewardTimeout;
@@ -64,13 +66,12 @@ contract LiquidQueue is Ownable {
         bool LPburnDisabled; // if behodler's listing of LPs is enough incentive to not unwind then no need for LP burning
     }
 
-    struct RainState {
-        uint256 startTime;
-        uint256 endTime; //joins after 1this are not paid
-    }
-
     QueueConfig queueConfig;
     QueueState queueState;
+
+    function setReward(address r) public onlyOwner {
+        rewardContract = RewardLike(r);
+    }
 
     function pause(bool paws) public onlyOwner {
         paused = paws; // pores
@@ -81,7 +82,7 @@ contract LiquidQueue is Ownable {
     }
 
     function configure(
-        uint8 targetVelocity,
+        uint24 targetVelocity,
         uint8 size,
         address eye,
         uint256 stagnationRewardTimeout,
@@ -132,13 +133,26 @@ contract LiquidQueue is Ownable {
             durationSinceLast =
                 newEntryTimeStamp -
                 queueState.queue[queueState.entryIndex].joinTimeStamp;
-            queueState.velocity += (durationSinceLast) / queueConfig.size;
-            queueState.velocity -=
-                queueState.queue[queueState.lastIndex].durationSinceLast /
+            queueState.velocity +=
+                ((1 weeks) / (durationSinceLast + 1)) /
                 queueConfig.size;
+            if (queueState.queue.length == queueConfig.size) {
+                uint256 leavingVelocity =
+                    ((1 weeks) /
+                        (queueState.queue[queueState.lastIndex]
+                            .durationSinceLast + 1)) / queueConfig.size;
+                uint256 existingVelocity = queueState.velocity;
+                queueState.velocity = existingVelocity < leavingVelocity
+                    ? 0 //queueState.velocity
+                    : existingVelocity - leavingVelocity;
+            }
 
             //set LP burn ratio for next preson to leave
-            if (queueState.velocity > queueConfig.targetVelocity) {
+            if (
+                !queueConfig.LPburnDisabled &&
+                queueState.velocity > queueConfig.targetVelocity &&
+                queueState.queue.length == queueConfig.size
+            ) {
                 queueState.burnRatio = queueState.burnRatio < 49
                     ? queueState.burnRatio + 1
                     : 49;
@@ -149,7 +163,7 @@ contract LiquidQueue is Ownable {
 
         //if eye rewards are active but velocity picks up, disable eye rewards
         if (queueState.eyeActive) {
-            queueState.eyeHeight += durationSinceLast / queueConfig.eyeReward;
+            queueState.eyeHeight += durationSinceLast * queueConfig.eyeReward;
             if (queueState.velocity > queueConfig.targetVelocity) {
                 queueState.eyeActive = false;
                 queueState.criticalVelocityStart = 0;
@@ -159,7 +173,8 @@ contract LiquidQueue is Ownable {
         //if velocity falls below target, after timeout set eye rewards to active
         if (
             queueState.velocity < queueConfig.targetVelocity &&
-            !queueState.eyeActive
+            !queueState.eyeActive &&
+            queueState.queue.length > 0
         ) {
             if (queueState.criticalVelocityStart == 0)
                 queueState.criticalVelocityStart = block.timestamp;
@@ -180,11 +195,11 @@ contract LiquidQueue is Ownable {
             Batch({
                 recipient: recipient,
                 LP: LP,
-                amount: queueConfig.LPburnDisabled
-                    ? balance
-                    : (balance * (queueState.burnRatio)) / 100,
+                amount: balance - ((balance * queueState.burnRatio) / 100),
                 joinTimeStamp: block.timestamp,
-                durationSinceLast: durationSinceLast,
+                durationSinceLast: queueState.queue.length == 0
+                    ? (1 weeks)
+                    : durationSinceLast,
                 eyeHeightAtJoin: queueState.eyeHeight
             });
 
@@ -218,14 +233,16 @@ contract LiquidQueue is Ownable {
             uint256 length,
             uint256 last,
             uint256 entryIndex,
-            uint velocity
+            uint256 velocity,
+            uint256 burnRatio
         )
     {
         return (
             queueState.queue.length,
             queueState.lastIndex,
             queueState.entryIndex,
-            queueState.velocity
+            queueState.velocity,
+            queueState.burnRatio
         );
     }
 
@@ -257,10 +274,16 @@ contract LiquidQueue is Ownable {
 
     function payLeaver(Batch memory leaver) internal {
         IERC20(leaver.LP).transfer(leaver.recipient, leaver.amount);
-        uint256 eyeReward = queueState.eyeHeight - leaver.eyeHeightAtJoin;
-        if (eyeReward > 0)
-            IERC20(queueConfig.eye).transfer(leaver.recipient, eyeReward);
-
+        uint256 eyeReward = (queueState.eyeHeight - leaver.eyeHeightAtJoin);
+        if (eyeReward > 0) {
+            //don't fail if can't pay staking reward.
+            if (
+                rewardContract.requestSlowQueueReward(
+                    queueConfig.eye,
+                    eyeReward
+                )
+            ) IERC20(queueConfig.eye).transfer(leaver.recipient, eyeReward);
+        }
         emit popped(leaver.LP, leaver.amount, leaver.recipient);
     }
 

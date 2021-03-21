@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Reward", function () {
-  let owner, mintingModule, MockERC20Factory, reward, eye, scx, ironCrown
+  let owner, mintingModule, MockERC20Factory, reward, eye, scx, ironCrown, liquidQueue
   beforeEach(async function () {
     [owner, mintingModule] = await ethers.getSigners();
     const Reward = await ethers.getContractFactory("Reward")
@@ -14,7 +14,10 @@ describe("Reward", function () {
     const IronCrown = await ethers.getContractFactory("MockIronCrown")
     ironCrown = await IronCrown.deploy(scx.address, reward.address)
 
-    await reward.seed(mintingModule.address, ironCrown.address, eye.address, scx.address)
+    const LiquidQueueFactory = await ethers.getContractFactory("MockLiquidQueue")
+    liquidQueue = await LiquidQueueFactory.deploy()
+
+    await reward.seed(mintingModule.address, liquidQueue.address, ironCrown.address, eye.address, scx.address)
   })
 
   it("canReward fails on invalid token and returns false on empty valid token", async function () {
@@ -52,4 +55,19 @@ describe("Reward", function () {
     await reward.toggle(true)
     await expect(reward.withdraw(scx.address)).to.be.revertedWith('LIQUID QUEUE: Reward enabled status wrong')
   })
+
+  it("request slow reward works for liquid queue", async function () {
+    await eye.mint(reward.address, 10000)
+    expect(await eye.balanceOf(liquidQueue.address)).to.equal(0)
+
+    await liquidQueue.requestEyeReward(reward.address, eye.address, 2000)
+
+    expect(await eye.balanceOf(liquidQueue.address)).to.equal(2000)
+
+  })
+
+  it("requestSlowQueueReward can only be called from LQ", async function () {
+    await eye.mint(reward.address, 1)
+    await expect(reward.requestSlowQueueReward(eye.address, 1)).to.be.revertedWith("LIQUID QUEUE: only Liquid Queue")
+  });
 });

@@ -27,11 +27,11 @@ describe("Liquid Queue", function () {
 
         const LiquidQueueFactory = await ethers.getContractFactory('LiquidQueue')
         liquidQueue = await LiquidQueueFactory.deploy()
-
+        await liquidQueue.setReward(reward.address)
         const MintingModuleFactory = await ethers.getContractFactory('MintingModule')
 
         mintingModule = await MintingModuleFactory.deploy(dai.address, scx.address, eye.address, uniswapRouter.address, uniSwapFactory.address, liquidQueue.address)
-        await reward.seed(mintingModule.address, ironCrown.address, eye.address, scx.address)
+        await reward.seed(mintingModule.address, liquidQueue.address, ironCrown.address, eye.address, scx.address)
         await mintingModule.seed(uniSwapFactory.address, uniswapRouter.address, reward.address, 30)
 
         await liquidQueue.setMintingModule(mintingModule.address)
@@ -82,9 +82,8 @@ describe("Liquid Queue", function () {
 
     it("queue pops LP into wallets, emits correct events", async function () {
         // await network.provider.send("evm_setAutomine", [false])
-        await network.provider.send("evm_setIntervalMining", [10])
+        //   // await network.provider.send("evm_setIntervalMining", [10])
 
-        //TODO:  await liquidQueue.configure(10, 21, eye.address, 10000, 10000, false)
         await liquidQueue.configure(1, 3, eye.address, 2, 1, true)
         //mint scx and eye
         await scx.mint(owner.address, '1000000000000000000000')
@@ -128,7 +127,7 @@ describe("Liquid Queue", function () {
         expect(batches[0][LP_index]).to.equal(scx_eye_pair.address)
         expect(batches[0][AMOUNT_index].toNumber()).to.be.above(0)
         expect(batches[0][JOINTIMESTAMP_index].toString()).to.not.equal('0')
-        expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(0)
+        expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(604800) // first item is made to look slow
 
         queueData = (await liquidQueue.getQueueData())
             .map(item => item.toNumber());//[length,last,entry]
@@ -154,26 +153,28 @@ describe("Liquid Queue", function () {
         expect(queueData[0]).to.equal(2)
         expect(queueData[1]).to.equal(0)
         expect(queueData[2]).to.equal(1)
-        expect(queueData[3]).to.be.above(330)
+        expect(queueData[3]).to.be.above(150)
         expect(queueData[3]).to.be.below(400)
 
         batches = []
         for (let i = 0; i < 3; i++)
             batches.push(await liquidQueue.getBatch(i))
 
+        /*UNCOMMENT TO PRINT DEBUG OUTPUT 
         let printbatches = batches.map(b => {
-            b = b.map((r, i) => {
-                let val = ''
-                if (i > 1 && i < 6)
-                    val = r.toString();
-                val = r;
-                return `${i}: ${val}`
-            })
-            return b
-        })
-        console.log(JSON.stringify(printbatches, null, 4))
-        console.log('scx_eye ' + scx_eye_pair.address)
-        console.log('dai_eye ' + daiEyePair.address)
+             b = b.map((r, i) => {
+                 let val = ''
+                 if (i > 1 && i < 6)
+                     val = r.toString();
+                 val = r;
+                 return `${i}: ${val}`
+             })
+             return b
+         })
+         console.log(JSON.stringify(printbatches, null, 4))
+         console.log('scx_eye ' + scx_eye_pair.address)
+         console.log('dai_eye ' + daiEyePair.address)
+ */
 
         expect(batches[0][VALID_index]).to.be.true
         expect(batches[1][VALID_index]).to.be.true
@@ -183,7 +184,7 @@ describe("Liquid Queue", function () {
         expect(batches[0][LP_index]).to.equal(scx_eye_pair.address)
         expect(batches[0][AMOUNT_index].gt(0)).to.be.true
         expect(batches[0][JOINTIMESTAMP_index].toString()).to.not.equal('0')
-        expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(0)
+        expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(604800)
 
         expect(batches[1][RECIPIENT_index]).to.equal(owner.address)
         expect(batches[1][LP_index]).to.equal(daiEyePair.address)
@@ -201,8 +202,8 @@ describe("Liquid Queue", function () {
         expect(queueData[0]).to.equal(3)
         expect(queueData[1]).to.equal(0)
         expect(queueData[2]).to.equal(2)
-        expect(queueData[3]).to.be.above(600)
-        expect(queueData[3]).to.be.below(800)
+        expect(queueData[3]).to.be.above(300)
+        expect(queueData[3]).to.be.below(500)
 
         batches = []
         for (let i = 0; i < 3; i++)
@@ -212,7 +213,7 @@ describe("Liquid Queue", function () {
         expect(batches[0][LP_index]).to.equal(scx_eye_pair.address)
         expect(batches[0][AMOUNT_index].gt(0)).to.be.true
         expect(batches[0][JOINTIMESTAMP_index].toString()).to.not.equal('0')
-        expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(0)
+        expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(604800)
 
         expect(batches[1][RECIPIENT_index]).to.equal(owner.address)
         expect(batches[1][LP_index]).to.equal(daiEyePair.address)
@@ -241,8 +242,8 @@ describe("Liquid Queue", function () {
         expect(queueData[0]).to.equal(3)
         expect(queueData[1]).to.equal(1)
         expect(queueData[2]).to.equal(0)
-        expect(queueData[3]).to.be.above(900)
-        expect(queueData[3]).to.be.below(1020)
+        expect(queueData[3]).to.be.above(500)
+        expect(queueData[3]).to.be.below(700)
 
         batches = []
         for (let i = 0; i < 3; i++)
@@ -266,7 +267,6 @@ describe("Liquid Queue", function () {
         expect(batches[2][JOINTIMESTAMP_index].toString()).to.not.equal('0')
         expect(batches[2][DURATIONSINCELAST_index].toNumber()).to.be.above(1000)
 
-
         expect(await daiEyePair.balanceOf(owner.address)).to.equal(0)
         await network.provider.send("evm_increaseTime", [1000])
         //FOURTH PURCHASE    
@@ -279,20 +279,212 @@ describe("Liquid Queue", function () {
         expect(queueData[0]).to.equal(3)
         expect(queueData[1]).to.equal(2)
         expect(queueData[2]).to.equal(1)
-        expect(queueData[3]).to.be.above(900)
-        expect(queueData[3]).to.be.below(1020)
+        expect(queueData[3]).to.be.above(500)
+        expect(queueData[3]).to.be.below(700)
     })
 
     it("fast queue increases LP burn until max", async function () {
+        // await network.provider.send("evm_setAutomine", [false])
+        // await network.provider.send("evm_setIntervalMining", [10])
+        //1 week = 604800 seconds
+        await liquidQueue.configure(1, 3, eye.address, 2000, 1, false)
+        //mint scx and eye
+        await scx.mint(owner.address, '1000000000000000000000')
+        await eye.mint(owner.address, '1000000000000000000000')
+        await scx.mint(reward.address, '1000000000000000000000')
+        await eye.mint(reward.address, '1000000000000000000000')
+        //preseed LP with large reserves
+        const pairAddress = await uniSwapFactory.getPair(scx.address, eye.address)
+        const scx_eye_pair = await ethers.getContractAt('UniswapV2Pair', pairAddress)
+        await scx.transfer(pairAddress, '100000000000000000000')
+        await eye.transfer(pairAddress, '10000000000000000000')
+        await scx_eye_pair.mint(secondPerson.address)
 
+        let queueData = (await liquidQueue.getQueueData())
+            .map(item => item.toNumber());//[length,last,entry]
+        expect(queueData[0]).to.equal(0)
+        expect(queueData[1]).to.equal(0)
+        expect(queueData[2]).to.equal(0)
+
+        let batches = []
+        for (let i = 0; i < 3; i++)
+            batches.push(await liquidQueue.getBatch(i))
+
+        expect(batches[0][VALID_index]).to.be.false
+        expect(batches[1][VALID_index]).to.be.false
+        expect(batches[2][VALID_index]).to.be.false
+
+        //FILL QUEUE FIRST 
+        await eye.approve(mintingModule.address, '1000000000000000000000')
+        await mintingModule.purchaseLP(eye.address, '1000000000000000')
+        queueData = await liquidQueue.getQueueData()
+        expect(queueData[4]).to.equal(0)
+
+        await network.provider.send("evm_increaseTime", [500])
+        await eye.approve(mintingModule.address, '1000000000000000000000')
+        await mintingModule.purchaseLP(eye.address, '1000000000000000')
+        queueData = await liquidQueue.getQueueData()
+        expect(queueData[4]).to.equal(0)
+
+        for (let i = 0; i < 60; i++) {
+            const expectedBurnRatio = i > 49 ? 49 : i
+            await network.provider.send("evm_increaseTime", [500])
+            await eye.approve(mintingModule.address, '1000000000000000000000')
+            await mintingModule.purchaseLP(eye.address, '1000000000000000')
+            queueData = await liquidQueue.getQueueData()
+            expect(queueData[4]).to.equal(expectedBurnRatio)
+        }
     })
 
     it("fast queue with LP burn turned off doesn't burn", async function () {
+        // await network.provider.send("evm_setAutomine", [false])
+        // await network.provider.send("evm_setIntervalMining", [10])
+        //1 week = 604800 seconds
+        await liquidQueue.configure(1, 3, eye.address, 2000, 1, true)
+        //mint scx and eye
+        await scx.mint(owner.address, '1000000000000000000000')
+        await eye.mint(owner.address, '1000000000000000000000')
+        await scx.mint(reward.address, '1000000000000000000000')
+        await eye.mint(reward.address, '1000000000000000000000')
+        //preseed LP with large reserves
+        const pairAddress = await uniSwapFactory.getPair(scx.address, eye.address)
+        const scx_eye_pair = await ethers.getContractAt('UniswapV2Pair', pairAddress)
+        await scx.transfer(pairAddress, '100000000000000000000')
+        await eye.transfer(pairAddress, '10000000000000000000')
+        await scx_eye_pair.mint(secondPerson.address)
 
+        let queueData = (await liquidQueue.getQueueData())
+            .map(item => item.toNumber());//[length,last,entry]
+        expect(queueData[0]).to.equal(0)
+        expect(queueData[1]).to.equal(0)
+        expect(queueData[2]).to.equal(0)
+
+        let batches = []
+        for (let i = 0; i < 3; i++)
+            batches.push(await liquidQueue.getBatch(i))
+
+        expect(batches[0][VALID_index]).to.be.false
+        expect(batches[1][VALID_index]).to.be.false
+        expect(batches[2][VALID_index]).to.be.false
+
+        //FILL QUEUE FIRST 
+        await eye.approve(mintingModule.address, '1000000000000000000000')
+        await mintingModule.purchaseLP(eye.address, '1000000000000000')
+        queueData = await liquidQueue.getQueueData()
+        expect(queueData[4]).to.equal(0)
+
+        await network.provider.send("evm_increaseTime", [500])
+        await eye.approve(mintingModule.address, '1000000000000000000000')
+        await mintingModule.purchaseLP(eye.address, '1000000000000000')
+        queueData = await liquidQueue.getQueueData()
+        expect(queueData[4]).to.equal(0)
+
+        for (let i = 0; i < 60; i++) {
+            const expectedBurnRatio = 0
+            await network.provider.send("evm_increaseTime", [500])
+            await eye.approve(mintingModule.address, '1000000000000000000000')
+            await mintingModule.purchaseLP(eye.address, '1000000000000000')
+            queueData = await liquidQueue.getQueueData()
+            expect(queueData[4]).to.equal(expectedBurnRatio)
+        }
     })
 
     it("stagnant queue has eye reward until queue moving. Cumulative eye reward per user correct.", async function () {
+        // await network.provider.send("evm_setIntervalMining", [10])
+        //1 week = 604800 seconds
+        await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
+        await eye.mint(reward.address, ethers.utils.parseEther('1000'))
+        await dai.mint(owner.address, ethers.utils.parseEther('100'))
+        const daiEyePairAddress = await uniSwapFactory.getPair(dai.address, eye.address)
+        const daiEyePair = await ethers.getContractAt('UniswapV2Pair', daiEyePairAddress)
+        await dai.transfer(daiEyePairAddress, '100000000000000000000')
+        await eye.mint(daiEyePairAddress, '10000000000000000000')
+        daiEyePair.mint(secondPerson.address)
 
+        await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await network.provider.send("evm_increaseTime", [40000])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await network.provider.send("evm_increaseTime", [40000])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await network.provider.send("evm_increaseTime", [40000])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        expect((await eye.balanceOf(owner.address)).toNumber()).to.be.greaterThan(80000 - 1)
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        let velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        let eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        eyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + eyeBal)
+
+
+        await network.provider.send("evm_increaseTime", [10])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        velocity = (await liquidQueue.getQueueData())[3]
+        console.log('velocity: ' + velocity)
+        let lastEyeBal = (await eye.balanceOf(owner.address)).toNumber()
+        console.log('eyeBal: ' + lastEyeBal)
+
+        expect(eyeBal).to.equal(lastEyeBal)
+
+        //expect((await eye.balanceOf(owner.address)).toNumber()).to.be.lessThan(80000 + 10)
     })
 
     it("configuring paused queue fails", async function () {

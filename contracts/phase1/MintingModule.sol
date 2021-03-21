@@ -8,13 +8,10 @@ import "../uniswapv2/interfaces/IUniswapV2Router02.sol";
 import "../uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "../uniswapv2/WETH.sol";
 import "../uniswapv2/libraries/UniswapV2Library.sol";
+import "../facades/RewardLike.sol";
 
 abstract contract LiquidQueueLike {
     function join(address LP, address recipient) public virtual;
-}
-
-abstract contract RewardLike {
-    function requestReward(address token, uint256 value) public virtual;
 }
 
 contract MintingModule is Ownable {

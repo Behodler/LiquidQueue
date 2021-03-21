@@ -15,6 +15,7 @@ contract Reward is Ownable {
     IronCrownLike public ironCrown;
     RewardTokenAddresses rewardTokens;
     address mintingModule;
+    address liquidQueue;
     bool public enabled;
 
     constructor() {
@@ -25,6 +26,7 @@ contract Reward is Ownable {
 
     function seed(
         address _mintingModule,
+        address _liquidQueue,
         address _ironCrown,
         address eye,
         address scx
@@ -32,6 +34,7 @@ contract Reward is Ownable {
         rewardTokens.EYE = eye;
         rewardTokens.SCX = scx;
         mintingModule = _mintingModule;
+        liquidQueue = _liquidQueue;
         ironCrown = IronCrownLike(_ironCrown);
     }
 
@@ -73,6 +76,21 @@ contract Reward is Ownable {
             "LIQUID QUEUE: insufficient reward token balance"
         );
         IERC20(token).transfer(mintingModule, value);
+    }
+
+    function requestSlowQueueReward(address token, uint256 value)
+        public
+        onlyValidTokens(token)
+        isEnabled(true)
+        returns (bool)
+    {
+        ironCrown.settlePayments();
+        require(msg.sender == liquidQueue, "LIQUID QUEUE: only Liquid Queue");
+        if (canReward(token, value)) {
+            IERC20(token).transfer(liquidQueue, value);
+            return true;
+        }
+        return false;
     }
 
     function withdraw(address token) public onlyOwner isEnabled(false) {
