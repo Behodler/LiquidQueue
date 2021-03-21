@@ -29,7 +29,7 @@ describe("MintingModule", function () {
         const MintingModuleFactory = await ethers.getContractFactory('MintingModule')
 
         mintingModule = await MintingModuleFactory.deploy(dai.address, scx.address, eye.address, uniswapRouter.address, uniSwapFactory.address, liquidQueue.address)
-        await reward.seed(mintingModule.address, ironCrown.address, eye.address, scx.address)
+        await reward.seed(mintingModule.address, liquidQueue.address, ironCrown.address, eye.address, scx.address)
         await mintingModule.seed(uniSwapFactory.address, uniswapRouter.address, reward.address, 30)
 
         // await liquidQueue.setMintingModule(mintingModule.address)
@@ -280,5 +280,33 @@ describe("MintingModule", function () {
         await mintingModule.purchaseLP(eye.address, 1)
         console.log('scx balance of reward: ' + await scx.balanceOf(reward.address))
         expect(await scx.balanceOf(reward.address)).to.equal(269993)
+    })
+
+    it("specifying sluice gate blocks users", async function () {
+        const SluiceFactory = await ethers.getContractFactory("MockSluiceGate")
+        const sluiceGate = await SluiceFactory.deploy()
+
+        await mintingModule.setSluiceGate(sluiceGate.address)
+        //mint scx and eye
+        await scx.mint(owner.address, '1000000000000000000000')
+        await eye.mint(owner.address, '1000000000000000000000')
+        await scx.mint(reward.address, '1000000000000000000000')
+        await eye.mint(reward.address, '1000000000000000000000')
+        //preseed LP with large reserves
+        const pairAddress = await uniSwapFactory.getPair(scx.address, eye.address)
+        const pair = await ethers.getContractAt('UniswapV2Pair', pairAddress)
+        await scx.transfer(pairAddress, '100000000000000000000')
+        await eye.transfer(pairAddress, '10000000000000000000')
+        await pair.mint(secondPerson.address)
+        const balanceOfLPHolder = await pair.balanceOf(secondPerson.address)
+        assert.equal(balanceOfLPHolder, '31304951684997054749')
+        //measure price
+
+        await eye.approve(mintingModule.address, '1000000000000000000000')
+        await expect(mintingModule.purchaseLP(eye.address, '1000000000000000')).to.be.revertedWith("LIQUID QUEUE: forbidden, closed beta")
+
+        await sluiceGate.setWhiteList(owner.address, true)
+        await mintingModule.purchaseLP(eye.address, '1000000000000000')
+
     })
 })

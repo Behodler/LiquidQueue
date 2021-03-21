@@ -9,6 +9,7 @@ import "../uniswapv2/interfaces/IUniswapV2Pair.sol";
 import "../uniswapv2/WETH.sol";
 import "../uniswapv2/libraries/UniswapV2Library.sol";
 import "../facades/RewardLike.sol";
+import "../facades/SluiceGateLike.sol";
 
 abstract contract LiquidQueueLike {
     function join(address LP, address recipient) public virtual;
@@ -29,6 +30,7 @@ contract MintingModule is Ownable {
     IUniswapV2Router02 uniswapRouter;
 
     RewardLike rewardContract;
+    SluiceGateLike public sluiceGate;
     address liquidQueue;
     bool locked;
     uint8 tiltPercentage;
@@ -40,6 +42,15 @@ contract MintingModule is Ownable {
         locked = true;
         _;
         locked = false;
+    }
+
+    modifier gateKeep {
+        require(
+            address(sluiceGate) == address(0) ||
+                sluiceGate.whitelist(msg.sender),
+            "LIQUID QUEUE: forbidden, closed beta"
+        );
+        _;
     }
 
     function seed(
@@ -89,11 +100,16 @@ contract MintingModule is Ownable {
         }
     }
 
+    function setSluiceGate(address s) public onlyOwner {
+        sluiceGate = SluiceGateLike(s);
+    }
+
     //Entry point for an external user into the Liquid Queue
     function purchaseLP(address inputToken, uint256 amount)
         public
         payable
         lock
+        gateKeep
     {
         if (msg.value > 0) {
             address wethAddress = uniswapRouter.WETH();
