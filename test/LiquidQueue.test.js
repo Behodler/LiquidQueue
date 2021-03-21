@@ -81,9 +81,6 @@ describe("Liquid Queue", function () {
     })
 
     it("queue pops LP into wallets, emits correct events", async function () {
-        // await network.provider.send("evm_setAutomine", [false])
-        //   // await network.provider.send("evm_setIntervalMining", [10])
-
         await liquidQueue.configure(1, 3, eye.address, 2, 1, true)
         //mint scx and eye
         await scx.mint(owner.address, '1000000000000000000000')
@@ -284,8 +281,6 @@ describe("Liquid Queue", function () {
     })
 
     it("fast queue increases LP burn until max", async function () {
-        // await network.provider.send("evm_setAutomine", [false])
-        // await network.provider.send("evm_setIntervalMining", [10])
         //1 week = 604800 seconds
         await liquidQueue.configure(1, 3, eye.address, 2000, 1, false)
         //mint scx and eye
@@ -337,8 +332,6 @@ describe("Liquid Queue", function () {
     })
 
     it("fast queue with LP burn turned off doesn't burn", async function () {
-        // await network.provider.send("evm_setAutomine", [false])
-        // await network.provider.send("evm_setIntervalMining", [10])
         //1 week = 604800 seconds
         await liquidQueue.configure(1, 3, eye.address, 2000, 1, true)
         //mint scx and eye
@@ -390,7 +383,6 @@ describe("Liquid Queue", function () {
     })
 
     it("stagnant queue has eye reward until queue moving. Cumulative eye reward per user correct.", async function () {
-        // await network.provider.send("evm_setIntervalMining", [10])
         //1 week = 604800 seconds
         await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
         await eye.mint(reward.address, ethers.utils.parseEther('1000'))
@@ -483,8 +475,6 @@ describe("Liquid Queue", function () {
         console.log('eyeBal: ' + lastEyeBal)
 
         expect(eyeBal).to.equal(lastEyeBal)
-
-        //expect((await eye.balanceOf(owner.address)).toNumber()).to.be.lessThan(80000 + 10)
     })
 
     it("configuring paused queue fails", async function () {
