@@ -477,15 +477,76 @@ describe("Liquid Queue", function () {
         expect(eyeBal).to.equal(lastEyeBal)
     })
 
-    it("configuring paused queue fails", async function () {
+    it("configuring unpaused queue fails", async function () {
+        // await liquidQueue.pause(true);
+        await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
+        await eye.mint(reward.address, ethers.utils.parseEther('1000'))
+        await dai.mint(owner.address, ethers.utils.parseEther('100'))
+        const daiEyePairAddress = await uniSwapFactory.getPair(dai.address, eye.address)
+        const daiEyePair = await ethers.getContractAt('UniswapV2Pair', daiEyePairAddress)
+        await dai.transfer(daiEyePairAddress, '100000000000000000000')
+        await eye.mint(daiEyePairAddress, '10000000000000000000')
+        daiEyePair.mint(secondPerson.address)
 
+        await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await expect(liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)).to.be.revertedWith("LIQUID QUEUE: Eye address currently locked")
+        await liquidQueue.pause(true);
+        await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
     })
 
-    it("Q pop can't happen on pause", async function () {
+    it("Q pop can't happen on unpause", async function () {
+        await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
+        await eye.mint(reward.address, ethers.utils.parseEther('1000'))
+        await dai.mint(owner.address, ethers.utils.parseEther('100'))
+        const daiEyePairAddress = await uniSwapFactory.getPair(dai.address, eye.address)
+        const daiEyePair = await ethers.getContractAt('UniswapV2Pair', daiEyePairAddress)
+        await dai.transfer(daiEyePairAddress, '100000000000000000000')
+        await eye.mint(daiEyePairAddress, '10000000000000000000')
+        daiEyePair.mint(secondPerson.address)
 
+        await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await network.provider.send("evm_increaseTime", [40000])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await network.provider.send("evm_increaseTime", [40000])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await network.provider.send("evm_increaseTime", [40000])
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        await expect(liquidQueue.pop()).to.be.revertedWith('LIQUID QUEUE: currently unpaused')
+        await liquidQueue.pause(true)
+        await liquidQueue.pop()
     })
 
-    it("Q pop reduces queue size and still functions correctly", async function () {
+    it("Q pop reduces queue size and doesn't cause invalid state", async function () {
+        await liquidQueue.configure(50000, 10, eye.address, 2000, 2, false)
+        await eye.mint(reward.address, ethers.utils.parseEther('1000'))
+        await dai.mint(owner.address, ethers.utils.parseEther('100'))
+        const daiEyePairAddress = await uniSwapFactory.getPair(dai.address, eye.address)
+        const daiEyePair = await ethers.getContractAt('UniswapV2Pair', daiEyePairAddress)
+        await dai.transfer(daiEyePairAddress, '100000000000000000000')
+        await eye.mint(daiEyePairAddress, '10000000000000000000')
+        daiEyePair.mint(secondPerson.address)
 
+        await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        for (let i = 0; i < 11; i++) {
+            await network.provider.send("evm_increaseTime", [40000])
+            await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        }
+
+        for (let i = 0; i < 9; i++) {
+            await liquidQueue.pause(true);
+            await liquidQueue.pop();
+            await network.provider.send("evm_increaseTime", [40000])
+            await liquidQueue.pause(false);
+            await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        }
     })
 })

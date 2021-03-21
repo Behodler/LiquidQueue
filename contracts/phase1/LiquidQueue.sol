@@ -97,8 +97,7 @@ contract LiquidQueue is Ownable {
         queueConfig.targetVelocity = targetVelocity;
         if (queueConfig.eye != address(0)) {
             require(
-                queueConfig.eye == eye ||
-                    queueState.queue.length == 0 ||
+                (queueConfig.eye == eye && queueState.queue.length == 0) ||
                     paused,
                 "LIQUID QUEUE: Eye address currently locked"
             );
@@ -220,10 +219,14 @@ contract LiquidQueue is Ownable {
         }
     }
 
+    //Only use this if you're planning on destroying or resetting the queue entirely
     //Note: to save gas, pop removes the latest batch in the queue, not the oldest batch
     function pop() public onlyOwner mustBePaused {
         payLeaver(queueState.queue[queueState.entryIndex]);
         queueState.queue.pop();
+        uint256 newLength = queueState.queue.length;
+        queueState.entryIndex = queueState.entryIndex % newLength;
+        queueState.lastIndex = queueState.lastIndex % newLength;
     }
 
     function getQueueData()
