@@ -2,7 +2,6 @@
 pragma solidity ^0.7.6;
 import "../openzeppelin/Ownable.sol";
 import "../openzeppelin/IERC20.sol";
-import "hardhat/console.sol";
 
 abstract contract IronCrownLike {
     function settlePayments() public virtual;
@@ -65,7 +64,6 @@ contract Reward is Ownable {
         isEnabled(true)
     {
         ironCrown.settlePayments();
-        console.log("reward requested for token:", token);
         require(
             msg.sender == mintingModule,
             "LIQUID QUEUE: only minting module"

@@ -6,7 +6,7 @@ import "../openzeppelin/IERC20.sol";
 
 /*
 RULES:
-1. A queue that has been stagnat for a set period of time starts rewarding EYE per queue place. Will use Nimrodel logic for this
+1. A queue that has been stagnant for a set period of time starts rewarding EYE per queue place. Will use Nimrodel logic for this
 2. We measure queue velocity by taking a moving average. If it exceeds a threshold, new LP entrants are burnt. The burn increases for each entrant underwhich it exceeds the threshold
 3. The queue is fixed in length but can be resized by admin. This is likely just a temporary measure. 
 */
@@ -111,10 +111,10 @@ contract LiquidQueue is Ownable {
         queueConfig.eye = eye;
         queueConfig.stagnationRewardTimeout = stagnationRewardTimeout;
         queueConfig.eyeReward = eyeReward;
-        queueConfig.LPburnDisabled;
+        queueConfig.LPburnDisabled = LPburnDisabled;
     }
 
-    //take reward, advance queue structure, pop out end of queue
+    //take reward, advance queue structure, pop out end of queue. External users must enter through MintingModule.purchaseLP
     function join(address LP, address recipient)
         public
         onlyMintingModule
@@ -123,10 +123,9 @@ contract LiquidQueue is Ownable {
         //pull in the minted LP from the minting module
         IUniswapV2Pair pair = IUniswapV2Pair(LP);
         uint256 balance = pair.balanceOf(mintingModule);
-        require(balance>0,"LIQUID QUEUE: Nothing to queue");
         pair.transferFrom(mintingModule, address(this), balance);
 
-        //calculate current velocity. If it is high, turn off LP burn, otherwise set high.
+        //calculate current velocity. If it is high, turn off LP burn.
         uint256 newEntryTimeStamp = block.timestamp;
         uint256 durationSinceLast = 0;
         if (queueState.queue.length > 0) {
@@ -172,7 +171,11 @@ contract LiquidQueue is Ownable {
             }
         }
 
-        Batch memory leaver = queueState.queue[queueState.lastIndex];
+        if (queueState.queue.length == queueConfig.size) {
+            Batch memory leaver = queueState.queue[queueState.lastIndex];
+            payLeaver(leaver);
+        }
+
         Batch memory joiner =
             Batch({
                 recipient: recipient,
@@ -184,8 +187,6 @@ contract LiquidQueue is Ownable {
                 durationSinceLast: durationSinceLast,
                 eyeHeightAtJoin: queueState.eyeHeight
             });
-
-        payLeaver(leaver);
 
         emit queued(joiner.LP, joiner.amount, joiner.recipient);
         if (queueState.queue.length < queueConfig.size) {
@@ -210,14 +211,55 @@ contract LiquidQueue is Ownable {
         queueState.queue.pop();
     }
 
+    function getQueueData()
+        public
+        view
+        returns (
+            uint256 length,
+            uint256 last,
+            uint256 entryIndex,
+            uint velocity
+        )
+    {
+        return (
+            queueState.queue.length,
+            queueState.lastIndex,
+            queueState.entryIndex,
+            queueState.velocity
+        );
+    }
+
+    function getBatch(uint256 index)
+        external
+        view
+        returns (
+            address recipient,
+            address LP,
+            uint256 amount,
+            uint256 joinTimeStamp,
+            uint256 durationSinceLast,
+            uint256 eyeHeightAtJoin,
+            bool validIndex
+        )
+    {
+        Batch memory batch;
+        if (queueState.queue.length > index) {
+            batch = queueState.queue[index];
+            recipient = batch.recipient;
+            LP = batch.LP;
+            amount = batch.amount;
+            joinTimeStamp = batch.joinTimeStamp;
+            durationSinceLast = batch.durationSinceLast;
+            eyeHeightAtJoin = batch.eyeHeightAtJoin;
+            validIndex = true;
+        }
+    }
+
     function payLeaver(Batch memory leaver) internal {
         IERC20(leaver.LP).transfer(leaver.recipient, leaver.amount);
         uint256 eyeReward = queueState.eyeHeight - leaver.eyeHeightAtJoin;
         if (eyeReward > 0)
-            IERC20(queueConfig.eye).transfer(
-                leaver.recipient,
-                queueState.eyeHeight - leaver.eyeHeightAtJoin
-            );
+            IERC20(queueConfig.eye).transfer(leaver.recipient, eyeReward);
 
         emit popped(leaver.LP, leaver.amount, leaver.recipient);
     }
