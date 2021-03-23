@@ -277,9 +277,9 @@ contract LiquidQueue is Ownable {
 
     function payLeaver(Batch memory leaver) internal {
         IERC20(leaver.LP).transfer(leaver.recipient, leaver.amount);
-        uint256 eyeReward = (queueState.eyeHeight - leaver.eyeHeightAtJoin);
+        uint256 eyeReward = (queueState.eyeHeight - leaver.eyeHeightAtJoin); //no need for overflow check. eyeHeightAtJoin can't be greater than eyeHeight
         if (eyeReward > 0) {
-            //don't fail if can't pay staking reward.
+            //don't fail if unable to pay staking reward.
             if (
                 rewardContract.requestSlowQueueReward(
                     queueConfig.eye,
