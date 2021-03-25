@@ -178,12 +178,4 @@ contract MintingModule is Ownable {
 
         LiquidQueueLike(liquidQueue).join(address(VARS.pair), recipient);
     }
-
-    function sortTokens(address tokenA, address tokenB)
-        public
-        pure
-        returns (address, address)
-    {
-        return UniswapV2Library.sortTokens(tokenA, tokenB);
-    }
 }

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.6;
 import './libraries/SafeMath.sol';
-import "hardhat/console.sol";
 
 contract UniswapV2ERC20 {
     using SafeMathUniswap for uint;
@@ -45,7 +44,6 @@ contract UniswapV2ERC20 {
     }
 
     function _burn(address from, uint value) internal {
-        console.log("Addusting total supply of LP");
         balanceOf[from] = balanceOf[from].sub(value);
         totalSupply = totalSupply.sub(value);
         emit Transfer(from, address(0), value);

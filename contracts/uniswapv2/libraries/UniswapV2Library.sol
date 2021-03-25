@@ -4,7 +4,6 @@ pragma solidity ^0.7.6;
 
 import '../interfaces/IUniswapV2Pair.sol';
 import '../interfaces/IUniswapV2Factory.sol';
-import "hardhat/console.sol";
 
 import "./SafeMath.sol";
 
