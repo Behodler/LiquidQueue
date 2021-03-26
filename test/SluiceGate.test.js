@@ -69,10 +69,18 @@ describe("SluiceGate", function () {
 
         await pair.approve(sluiceGate.address, ethers.utils.parseEther("1000"))
         const balanceBefore = await pair.balanceOf(owner.address)
+
         await sluiceGate.betaApply(eye_dai)
         expect(await sluiceGate.whitelist(owner.address)).to.be.true
 
-        expect(await pair.balanceOf(owner.address)).to.equal(0)
+        // const lpBalanceAfter = await pair.balanceOf(owner.address)
+        // await pair.transfer(pair.address, lpBalanceAfter)
+        // const eyebalanceBeforeBurn = await eye.balanceOf(owner.address)
+        // await pair.burn(owner.address)
+        // const eyeBalanceAfterBurn = await eye.balanceOf(owner.address)
+
+        // console.log(`before: ${eyebalanceBeforeBurn}, after: ${eyeBalanceAfterBurn}`)
+        // expect(eyeBalanceAfterBurn.toString()).to.equal('316227766016834770')
 
         await sluiceGate.unstake(eye_dai)
         expect(await pair.balanceOf(owner.address)).to.equal(balanceBefore)
