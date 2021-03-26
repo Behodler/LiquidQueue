@@ -17,7 +17,7 @@ describe("SluiceGate", function () {
         uniswapRouter = await RouterFactory.deploy(uniswapFactory.address, weth.address)
 
         MockToken = await ethers.getContractFactory("MockToken")
-        scx = await MockToken.deploy("SCX", "SCX", owner.address, false);
+        scx = await MockToken.deploy("SCX", "SCX", owner.address, true);
         eye = await MockToken.deploy("EYE", "EYE", owner.address, false);
         dai = await MockToken.deploy("DAI", "DAI", owner.address, false);
 
