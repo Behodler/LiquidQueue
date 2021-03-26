@@ -47,36 +47,46 @@ contract SluiceGate is Ownable {
             if (address(currentLP) == lp) {
                 uint256 balance = currentLP.balanceOf(msg.sender);
                 if (LPs[i].required == 0 && balance > 0) {
-                    currentLP.transferFrom(msg.sender, address(this), balance);
-                    LPstake[msg.sender][address(currentLP)] += balance;
+                    currentLP.transferFrom(
+                        msg.sender,
+                        address(this),
+                        balance / 10
+                    ); // take 10% deposit
+                    LPstake[msg.sender][address(currentLP)] += balance / 10;
                     whitelist[msg.sender] = true;
                 } else if (LPs[i].required > 0) {
                     uint256 totalSupply = currentLP.totalSupply();
-                    uint256 ratio = balance.mul(ONE).div(totalSupply);
                     uint256 balanceOfUnderlyingToken =
                         IERC20(LPs[i].tokenToCheck).balanceOf(
                             address(currentLP)
                         );
-                    uint256 userShare =
-                        ratio.mul(balanceOfUnderlyingToken).div(ONE);
-                    if (userShare >= LPs[i].required-1e17) {
+                    uint256 requiredShare =
+                        (LPs[i].required.mul(ONE)) / balanceOfUnderlyingToken;
+                    uint256 lptokenBalanceRequired =
+                        requiredShare.mul(totalSupply).div(ONE) - 1e17;
+
+                    if (balance >= lptokenBalanceRequired) {
                         currentLP.transferFrom(
                             msg.sender,
                             address(this),
-                            balance
+                            lptokenBalanceRequired
                         );
-                        LPstake[msg.sender][address(currentLP)] += balance;
+                        LPstake[msg.sender][
+                            address(currentLP)
+                        ] += lptokenBalanceRequired;
                         whitelist[msg.sender] = true;
                     }
                 }
             }
         }
     }
-    
-    
+
     function unstake(address lp) public {
-        whitelist[msg.sender]=false;
-        uint balance = LPstake[msg.sender][lp];
+        whitelist[msg.sender] = false;
+        uint256 balance = LPstake[msg.sender][lp];
+        IERC20 pair = IERC20(lp);
+        uint256 remainingBalance = pair.balanceOf(address(this));
+        balance = remainingBalance > balance ? balance : remainingBalance;
         IERC20(lp).transfer(msg.sender, balance);
     }
 }
