@@ -12,10 +12,13 @@ const Sluicegate = artifacts.require('SluiceGate')
 
 const MockIronCrown = artifacts.require("MockIronCrown")
 const zero = '0x0000000000000000000000000000000000000000'
+const fs = require('fs')
 
 module.exports = async function (deployer, network, accounts) {
+    let deploymentObject = JSON.parse(fs.readFileSync('/home/justin/weidai ecosystem/LiquidQueue/deploymentObject.json', "utf-8"))
+
     let wethInstance, factoryInstance, rewardInstance, ironCrownInstance, routerInstance, eyeInstance, daiInstance, scxInstance
-    let liquidQueueInstance, mintingModuleInstance
+    let liquidQueueInstance, mintingModuleInstance, sluiceGateInstance
     if (network === 'development') {
         //uniswap
         await deployer.deploy(WETH)
@@ -53,5 +56,19 @@ module.exports = async function (deployer, network, accounts) {
         await liquidQueueInstance.setMintingModule(mintingModuleInstance.address)
 
         await liquidQueueInstance.configure(10, 21, eyeInstance.address, 10000, 10000, false)
+
+        const scx_eye = await factoryInstance.getPair(scxInstance.address, eyeInstance.address)
+        const eye_weth = await factoryInstance.getPair(wethInstance.address, eyeInstance.address)
+
+        await deployer.deploy(Sluicegate, scx_eye, eye_weth, eyeInstance.address)
+        sluiceGateInstance = await Sluicegate.deployed()
+        let contracts = {
+            LiquidQueue: liquidQueueInstance.address,
+            MintingModule: mintingModuleInstance.address,
+            Reward: rewardInstance.address,
+            SluiceGate: sluiceGateInstance.address
+        }
+        deploymentObject[network] = contracts
+        fs.writeFileSync("deploymentObject.json", JSON.stringify(deploymentObject, null, 4), "utf-8")
     }
 };

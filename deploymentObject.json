@@ -1,0 +1,9 @@
+{
+    "development": {
+        "LiquidQueue": "0xa85d817A4Da79b98E555DC405ea5ac3Fb1B2689a",
+        "MintingModule": "0xD3D33a4f1703297E54D0C62D813eFA91c3B192F8",
+        "Reward": "0xE957E11d6dFB7b8540Fb88268Dd3Fc28f403B590",
+        "SluiceGate": "0xE34Dec6f64b39258F72e2d308c99a897379D4883"
+    },
+    "main": {}
+}
