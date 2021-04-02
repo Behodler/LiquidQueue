@@ -54,6 +54,7 @@ contract SluiceGate is Ownable {
                     ); // take 10% deposit
                     LPstake[msg.sender][address(currentLP)] += balance / 10;
                     whitelist[msg.sender] = true;
+                    return;
                 } else if (LPs[i].required > 0) {
                     uint256 totalSupply = currentLP.totalSupply();
                     uint256 balanceOfUnderlyingToken =
@@ -75,6 +76,7 @@ contract SluiceGate is Ownable {
                             address(currentLP)
                         ] += lptokenBalanceRequired;
                         whitelist[msg.sender] = true;
+                        return;
                     }
                 }
             }
