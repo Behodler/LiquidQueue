@@ -69,6 +69,10 @@ contract LiquidQueue is Ownable {
     QueueConfig queueConfig;
     QueueState queueState;
 
+    constructor() {
+        queueState.eyeActive = true;
+    }
+
     function setReward(address r) public onlyOwner {
         rewardContract = RewardLike(r);
     }
@@ -237,7 +241,9 @@ contract LiquidQueue is Ownable {
             uint256 last,
             uint256 entryIndex,
             uint256 velocity,
-            uint256 burnRatio
+            uint256 burnRatio,
+            bool eyeActive,
+            uint256 eyeReward
         )
     {
         return (
@@ -245,7 +251,9 @@ contract LiquidQueue is Ownable {
             queueState.lastIndex,
             queueState.entryIndex,
             queueState.velocity,
-            queueState.burnRatio
+            queueState.burnRatio,
+            queueState.eyeActive,
+            queueConfig.eyeReward
         );
     }
 

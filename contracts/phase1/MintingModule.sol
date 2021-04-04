@@ -33,7 +33,7 @@ contract MintingModule is Ownable {
     SluiceGateLike public sluiceGate;
     address liquidQueue;
     bool locked;
-    uint8 tiltPercentage;
+    uint8 public tiltPercentage;
     mapping(address => address) inputTokenTilting; // eg inputTokenTilting[address(EYE)] == address(SCX)
     mapping(address => address) inputOutputToken; // eg inputOutputToken(address(dai)) == address (EYE)
 

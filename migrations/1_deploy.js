@@ -68,7 +68,7 @@ module.exports = async function (deployer, network, accounts) {
         await mintingModuleInstance.seed(factoryInstance.address, routerInstance.address, rewardInstance.address, 20)
         await liquidQueueInstance.setMintingModule(mintingModuleInstance.address)
 
-        await liquidQueueInstance.configure(10, 21, eyeInstance.address, 10000, 10000, false)
+        await liquidQueueInstance.configure(10, 21, eyeInstance.address, 10000, '35000000000000000', false)
 
         const scx_eye = await factoryInstance.getPair(scxInstance.address, eyeInstance.address)
         const eye_weth = await factoryInstance.getPair(wethInstance.address, eyeInstance.address)

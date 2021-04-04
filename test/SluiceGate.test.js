@@ -86,4 +86,51 @@ describe("SluiceGate", function () {
         expect(await pair.balanceOf(owner.address)).to.equal(balanceBefore)
         expect(await sluiceGate.whitelist(owner.address)).to.be.false
     })
+
+    it('applying with both tokens in wallet does not remove both', async function () {
+        expect(await sluiceGate.whitelist(owner.address)).to.be.false
+        await dai.mint(eye_dai, ethers.utils.parseEther("100"))
+        await eye.mint(eye_dai, ethers.utils.parseEther("1000"))
+        const pair1 = await ethers.getContractAt('UniswapV2Pair', eye_dai)
+        await pair1.mint(owner.address)
+        await pair1.approve(sluiceGate.address, ethers.utils.parseEther("1000"))
+
+        await scx.mint(scx_eye, 10000)
+        await eye.mint(scx_eye, 10000)
+        const pair2 = await ethers.getContractAt('UniswapV2Pair', scx_eye)
+        await pair2.mint(owner.address)
+        await pair2.approve(sluiceGate.address, ethers.utils.parseEther("1"))
+
+        const balanceOfPair1OnSluiceBefore = await pair1.balanceOf(sluiceGate.address)
+        const balanceOfPair2OnSluiceBefore = await pair2.balanceOf(sluiceGate.address)
+        expect(balanceOfPair1OnSluiceBefore.toString()).to.equal("0")
+        expect(balanceOfPair2OnSluiceBefore.toString()).to.equal("0")
+
+        await sluiceGate.betaApply(eye_dai)
+
+        const balanceOfPair1OnSluiceAfter = await pair1.balanceOf(sluiceGate.address)
+        const balanceOfPair2OnSluiceAfter = await pair2.balanceOf(sluiceGate.address)
+        expect(balanceOfPair1OnSluiceAfter.toString()).to.not.equal("0")
+        expect(balanceOfPair2OnSluiceAfter.toString()).to.equal("0")
+
+        await sluiceGate.unstake(eye_dai)
+
+        const balanceOfPair1OnSluiceAfterUnstake = await pair1.balanceOf(sluiceGate.address)
+        const balanceOfPair2OnSluiceAfterUnstake = await pair2.balanceOf(sluiceGate.address)
+        expect(balanceOfPair1OnSluiceAfterUnstake.toString()).to.equal("0")
+        expect(balanceOfPair2OnSluiceAfterUnstake.toString()).to.equal("0")
+
+        await sluiceGate.betaApply(scx_eye)
+
+        const balanceOfPair1OnSluiceAfterSCX = await pair1.balanceOf(sluiceGate.address)
+        const balanceOfPair2OnSluiceAfterSCX = await pair2.balanceOf(sluiceGate.address)
+        expect(balanceOfPair2OnSluiceAfterSCX.toString()).to.not.equal("0")
+        expect(balanceOfPair1OnSluiceAfterSCX.toString()).to.equal("0")
+
+        const lpStake1 = BigInt((await sluiceGate.LPstake(owner.address, pair1.address)).toString())
+        expect(lpStake1).to.equal(0n)
+
+        const lpStake2 = BigInt((await sluiceGate.LPstake(owner.address, pair1.address)).toString())
+        expect(lpStake2).to.equal(0n)
+    })
 })

@@ -54,7 +54,6 @@ contract SluiceGate is Ownable {
                     ); // take 10% deposit
                     LPstake[msg.sender][address(currentLP)] += balance / 10;
                     whitelist[msg.sender] = true;
-                    return;
                 } else if (LPs[i].required > 0) {
                     uint256 totalSupply = currentLP.totalSupply();
                     uint256 balanceOfUnderlyingToken =
@@ -76,9 +75,9 @@ contract SluiceGate is Ownable {
                             address(currentLP)
                         ] += lptokenBalanceRequired;
                         whitelist[msg.sender] = true;
-                        return;
                     }
                 }
+                return;
             }
         }
     }
@@ -86,9 +85,11 @@ contract SluiceGate is Ownable {
     function unstake(address lp) public {
         whitelist[msg.sender] = false;
         uint256 balance = LPstake[msg.sender][lp];
+        LPstake[msg.sender][lp] = 0; // prevent reentrancy
         IERC20 pair = IERC20(lp);
         uint256 remainingBalance = pair.balanceOf(address(this));
         balance = remainingBalance > balance ? balance : remainingBalance;
+
         IERC20(lp).transfer(msg.sender, balance);
     }
 }

@@ -93,12 +93,13 @@ describe("Liquid Queue", function () {
         await scx.transfer(pairAddress, '100000000000000000000')
         await eye.transfer(pairAddress, '10000000000000000000')
         await scx_eye_pair.mint(secondPerson.address)
+        let queueue = (await liquidQueue.getQueueData())
+            .map(i => typeof (i).toString())
 
-        let queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry]
-        expect(queueData[0]).to.equal(0)
-        expect(queueData[1]).to.equal(0)
-        expect(queueData[2]).to.equal(0)
+        let queueData = (await liquidQueue.getQueueData())//[length,last,entry]
+        expect(queueData[0]).to.equal('0')
+        expect(queueData[1]).to.equal('0')
+        expect(queueData[2]).to.equal('0')
 
         let batches = []
         for (let i = 0; i < 3; i++)
@@ -126,11 +127,10 @@ describe("Liquid Queue", function () {
         expect(batches[0][JOINTIMESTAMP_index].toString()).to.not.equal('0')
         expect(batches[0][DURATIONSINCELAST_index].toNumber()).to.equal(604800) // first item is made to look slow
 
-        queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry]
-        expect(queueData[0]).to.equal(1)
-        expect(queueData[1]).to.equal(0)
-        expect(queueData[2]).to.equal(0)
+        queueData = (await liquidQueue.getQueueData())//[length,last,entry]
+        expect(queueData[0]).to.equal('1')
+        expect(queueData[1]).to.equal('0')
+        expect(queueData[2]).to.equal('0')
 
 
         await dai.mint(owner.address, ethers.utils.parseEther('10'))
@@ -145,13 +145,12 @@ describe("Liquid Queue", function () {
         //SECOND PURCHASE
         await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
         await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
-        queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry]
-        expect(queueData[0]).to.equal(2)
-        expect(queueData[1]).to.equal(0)
-        expect(queueData[2]).to.equal(1)
-        expect(queueData[3]).to.be.above(150)
-        expect(queueData[3]).to.be.below(400)
+        queueData = (await liquidQueue.getQueueData())//[length,last,entry]
+        expect(queueData[0]).to.equal('2')
+        expect(queueData[1]).to.equal('0')
+        expect(queueData[2]).to.equal('1')
+        expect(parseInt(queueData[3])).to.be.above(150)
+        expect(parseInt(queueData[3])).to.be.below(400)
 
         batches = []
         for (let i = 0; i < 3; i++)
@@ -195,7 +194,7 @@ describe("Liquid Queue", function () {
         await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
         await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
         queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry,velocity]
+            .map((item, i) => i < 4 ? item.toNumber() : item);//[length,last,entry,velocity]
         expect(queueData[0]).to.equal(3)
         expect(queueData[1]).to.equal(0)
         expect(queueData[2]).to.equal(2)
@@ -235,7 +234,7 @@ describe("Liquid Queue", function () {
         expect(await scx_eye_pair.balanceOf(owner.address)).to.equal(expectedReward)
 
         queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry,velocity]
+            .map((item, i) => i < 4 ? item.toNumber() : item);//[length,last,entry,velocity]
         expect(queueData[0]).to.equal(3)
         expect(queueData[1]).to.equal(1)
         expect(queueData[2]).to.equal(0)
@@ -272,7 +271,7 @@ describe("Liquid Queue", function () {
         expect(await daiEyePair.balanceOf(owner.address)).to.equal(batches[1][AMOUNT_index])
 
         queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry,velocity]
+            .map((item, i) => i < 4 ? item.toNumber() : item);//[length,last,entry,velocity]
         expect(queueData[0]).to.equal(3)
         expect(queueData[1]).to.equal(2)
         expect(queueData[2]).to.equal(1)
@@ -296,7 +295,7 @@ describe("Liquid Queue", function () {
         await scx_eye_pair.mint(secondPerson.address)
 
         let queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry]
+            .map((item, i) => i < 4 ? item.toNumber() : item);//[length,last,entry]0.005
         expect(queueData[0]).to.equal(0)
         expect(queueData[1]).to.equal(0)
         expect(queueData[2]).to.equal(0)
@@ -347,7 +346,7 @@ describe("Liquid Queue", function () {
         await scx_eye_pair.mint(secondPerson.address)
 
         let queueData = (await liquidQueue.getQueueData())
-            .map(item => item.toNumber());//[length,last,entry]
+            .map((item, i) => i < 4 ? item.toNumber() : item);//[length,last,entry]0.005
         expect(queueData[0]).to.equal(0)
         expect(queueData[1]).to.equal(0)
         expect(queueData[2]).to.equal(0)
