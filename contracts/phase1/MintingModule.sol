@@ -34,8 +34,8 @@ contract MintingModule is Ownable {
     address liquidQueue;
     bool locked;
     uint8 public tiltPercentage;
-    mapping(address => address) inputTokenTilting; // eg inputTokenTilting[address(EYE)] == address(SCX)
-    mapping(address => address) inputOutputToken; // eg inputOutputToken(address(dai)) == address (EYE)
+    mapping(address => address) public inputTokenTilting; // eg inputTokenTilting[address(EYE)] == address(SCX)
+    mapping(address => address) public inputOutputToken; // eg inputOutputToken(address(dai)) == address (EYE)
 
     modifier lock {
         require(!locked, "LIQUID QUEUE: reentrancy guard");

@@ -77,8 +77,12 @@ contract LiquidQueue is Ownable {
         rewardContract = RewardLike(r);
     }
 
-    function pause(bool paws) public onlyOwner {
-        paused = paws; // pores
+    function pause() public onlyOwner {
+        paused = true;
+    }
+
+    function unpause() public onlyOwner {
+        paused = false;
     }
 
     function setMintingModule(address m) public onlyOwner {

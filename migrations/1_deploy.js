@@ -34,10 +34,18 @@ module.exports = async function (deployer, network, accounts) {
         rewardInstance = await Reward.deployed()
 
         //mock tokens
-
         scxInstance = await MockToken.new("SCX", "SCX", rewardInstance.address, true)
         eyeInstance = await MockToken.new("EYE", "EYE", accounts[0], false)
         daiInstance = await MockToken.new("DAI", "DAI", accounts[0], false)
+        await scxInstance.mint(accounts[0], '10000000000000000000')
+        await eyeInstance.mint(accounts[0], '10000000000000000000')
+        await daiInstance.mint(accounts[0], '10000000000000000000')
+
+
+        //seed reward contract
+        await scxInstance.mint(rewardInstance.address, '250000000000000000000')
+        await eyeInstance.mint(rewardInstance.address, '10000000000000000000000')
+
 
         //create eyeWeth pool
         await factoryInstance.createPair(eyeInstance.address, wethInstance.address)
@@ -52,6 +60,7 @@ module.exports = async function (deployer, network, accounts) {
         await eyeWethLP.methods.mint(accounts[0]).send({ from: accounts[0], gas: gas })
         console.log('EYE_WETH total supply: ' + (await eyeWethLP.methods.totalSupply().call()).toString())
         console.log('EYE WETH address ' + eyeWeth)
+
         //Morgoth
         await deployer.deploy(MockIronCrown, scxInstance.address, rewardInstance.address)
         ironCrownInstance = await MockIronCrown.deployed()
@@ -71,17 +80,43 @@ module.exports = async function (deployer, network, accounts) {
         await liquidQueueInstance.configure(10, 21, eyeInstance.address, 10000, '35000000000000000', false)
 
         const scx_eye = await factoryInstance.getPair(scxInstance.address, eyeInstance.address)
-        const eye_weth = await factoryInstance.getPair(wethInstance.address, eyeInstance.address)
+        const scx_weth = await factoryInstance.getPair(wethInstance.address, scxInstance.address)
+        const eye_dai = await factoryInstance.getPair(daiInstance.address, eyeInstance.address)
+        const eye_weth = await factoryInstance.getPair(daiInstance.address, eyeInstance.address) // for entrance
 
         await eyeInstance.mint(scx_eye, '1000000000000000000000')
         await scxInstance.mint(scx_eye, '20000000000000000000001')
+
+        await eyeInstance.mint(eye_dai, '1000000000000000000000')
+        await daiInstance.mint(eye_dai, '5600000000000000000000')
+
+        await scxInstance.mint(scx_weth, '1000000000000000000000')
+        const newWeth = '300000000000000000'
+        await wethInstance.deposit({ value: newWeth, from: accounts[0] })
+        await wethInstance.transfer(scx_weth, newWeth, { from: accounts[0] })
 
         const scx_eyeLP = new web3.eth.Contract(pairJSON.abi, scx_eye)
         gas = await scx_eyeLP.methods.mint(accounts[0]).estimateGas({ from: accounts[0] })
         await scx_eyeLP.methods.mint(accounts[0]).send({ from: accounts[0], gas: gas })
         const totalSCXEYESupply = (await scx_eyeLP.methods.totalSupply().call()).toString()
         console.log('SCX_EYE LP total Supply: ' + totalSCXEYESupply)
+
+        const scx_wethLP = new web3.eth.Contract(pairJSON.abi, scx_weth)
+        gas = await scx_wethLP.methods.mint(accounts[0]).estimateGas({ from: accounts[0] })
+        await scx_wethLP.methods.mint(accounts[0]).send({ from: accounts[0], gas: gas })
+        const totalSCXWETHSupply = (await scx_wethLP.methods.totalSupply().call()).toString()
+        console.log('SCX_WETH LP total Supply: ' + totalSCXWETHSupply)
+
+        const eye_daiLP = new web3.eth.Contract(pairJSON.abi, eye_dai)
+        gas = await eye_daiLP.methods.mint(accounts[0]).estimateGas({ from: accounts[0] })
+        await eye_daiLP.methods.mint(accounts[0]).send({ from: accounts[0], gas: gas })
+        const totaEYEDAISupply = (await eye_daiLP.methods.totalSupply().call()).toString()
+        console.log('EYE_DAI LP total Supply: ' + totaEYEDAISupply)
+
+
         await deployer.deploy(Sluicegate, scx_eye, eye_weth, eyeInstance.address)
+
+
         sluiceGateInstance = await Sluicegate.deployed()
         let contracts = {
             LiquidQueue: liquidQueueInstance.address,

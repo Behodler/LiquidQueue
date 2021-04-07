@@ -56,7 +56,7 @@ describe("Liquid Queue", function () {
         await scx.transfer(pairAddress, '100000000000000000000')
         await eye.transfer(pairAddress, '10000000000000000000')
         await pair.mint(secondPerson.address)
-        await liquidQueue.pause(true)
+        await liquidQueue.pause()
         await eye.approve(mintingModule.address, '1000000000000000000000')
         await expect(mintingModule.purchaseLP(eye.address, '1000000000000000'))
             .to.be.revertedWith("LIQUID QUEUE: currently paused")
@@ -74,7 +74,7 @@ describe("Liquid Queue", function () {
         await scx.transfer(pairAddress, '100000000000000000000')
         await eye.transfer(pairAddress, '10000000000000000000')
         await pair.mint(secondPerson.address)
-        await liquidQueue.pause(true)
+        await liquidQueue.pause()
         await eye.approve(mintingModule.address, '1000000000000000000000')
         await expect(mintingModule.purchaseLP(eye.address, '0'))
             .to.be.revertedWith("UniswapV2Library: INSUFFICIENT_AMOUNT")
@@ -477,7 +477,7 @@ describe("Liquid Queue", function () {
     })
 
     it("configuring unpaused queue fails", async function () {
-        // await liquidQueue.pause(true);
+        // await liquidQueue.pause();
         await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
         await eye.mint(reward.address, ethers.utils.parseEther('1000'))
         await dai.mint(owner.address, ethers.utils.parseEther('100'))
@@ -491,7 +491,7 @@ describe("Liquid Queue", function () {
         await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
 
         await expect(liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)).to.be.revertedWith("LIQUID QUEUE: Eye address currently locked")
-        await liquidQueue.pause(true);
+        await liquidQueue.pause();
         await liquidQueue.configure(50000, 3, eye.address, 2000, 2, false)
     })
 
@@ -518,7 +518,7 @@ describe("Liquid Queue", function () {
         await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
 
         await expect(liquidQueue.pop()).to.be.revertedWith('LIQUID QUEUE: currently unpaused')
-        await liquidQueue.pause(true)
+        await liquidQueue.pause()
         await liquidQueue.pop()
     })
 
@@ -541,10 +541,10 @@ describe("Liquid Queue", function () {
         }
 
         for (let i = 0; i < 9; i++) {
-            await liquidQueue.pause(true);
+            await liquidQueue.pause();
             await liquidQueue.pop();
             await network.provider.send("evm_increaseTime", [40000])
-            await liquidQueue.pause(false);
+            await liquidQueue.unpause();
             await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
         }
     })
