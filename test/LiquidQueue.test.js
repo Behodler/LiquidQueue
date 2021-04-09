@@ -192,7 +192,21 @@ describe("Liquid Queue", function () {
 
         //THIRD PURCHASE
         await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
-        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+        await expect(mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))).to.emit(liquidQueue, 'queued')
+
+        /*
+           await expect(myContract.transferRequiresValue({
+               from: sender.address,
+               to: receiver.address,
+               value: goodValue}))
+              .to.emit(myContract, 'Transfer')
+              .withArgs(sender.address, receiver.address, goodValue);
+          });
+        
+          await expect(token.transfer(walletTo.address, 7))
+          .to.emit(token, 'Transfer')
+          .withArgs(wallet.address, walletTo.address, 7);
+        */
         queueData = (await liquidQueue.getQueueData())
             .map((item, i) => i < 4 ? item.toNumber() : item);//[length,last,entry,velocity]
         expect(queueData[0]).to.equal(3)
@@ -200,6 +214,7 @@ describe("Liquid Queue", function () {
         expect(queueData[2]).to.equal(2)
         expect(queueData[3]).to.be.above(300)
         expect(queueData[3]).to.be.below(500)
+
 
         batches = []
         for (let i = 0; i < 3; i++)
