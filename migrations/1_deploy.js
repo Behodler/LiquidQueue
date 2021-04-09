@@ -1,3 +1,9 @@
+const redis = require('redis')
+const client = redis.createClient();
+client.on('error', console.log)
+const { promisify } = require("util");
+const get = promisify(client.get).bind(client);
+
 const UniswapFactory = artifacts.require("UniswapV2Factory");
 const WETH = artifacts.require('WETH')
 const UniswapRouter = artifacts.require('UniswapV2Router02')
@@ -13,6 +19,8 @@ const MockIronCrown = artifacts.require("MockIronCrown")
 const zero = '0x0000000000000000000000000000000000000000'
 const fs = require('fs')
 const pairJSON = JSON.parse(fs.readFileSync('../build/contracts/UniswapV2Pair.json', 'utf-8'))
+const behodlerJSON = JSON.parse(fs.readFileSync('./Behodler.json','utf-8'))
+const lachesisSON = JSON.parse(fs.readFileSync('./Lachesis.json','utf-8'))
 
 module.exports = async function (deployer, network, accounts) {
     let deploymentObject = JSON.parse(fs.readFileSync('/home/justin/weidai ecosystem/LiquidQueue/deploymentObject.json', "utf-8"))
@@ -61,6 +69,7 @@ module.exports = async function (deployer, network, accounts) {
         console.log('EYE_WETH total supply: ' + (await eyeWethLP.methods.totalSupply().call()).toString())
         console.log('EYE WETH address ' + eyeWeth)
 
+
         //Morgoth
         await deployer.deploy(MockIronCrown, scxInstance.address, rewardInstance.address)
         ironCrownInstance = await MockIronCrown.deployed()
@@ -77,12 +86,40 @@ module.exports = async function (deployer, network, accounts) {
         await mintingModuleInstance.seed(factoryInstance.address, routerInstance.address, rewardInstance.address, 20)
         await liquidQueueInstance.setMintingModule(mintingModuleInstance.address)
 
-        await liquidQueueInstance.configure(10, 21, eyeInstance.address, 10000, '35000000000000000', false)
+        await liquidQueueInstance.configure(10, 4, eyeInstance.address, 10000, '35000000000000000', false)
+
+
+        //seed reward
+        await rewardInstance.seed(mintingModuleInstance.address, liquidQueueInstance.address, ironCrownInstance.address, eyeInstance.address, scxInstance.address)
+
 
         const scx_eye = await factoryInstance.getPair(scxInstance.address, eyeInstance.address)
         const scx_weth = await factoryInstance.getPair(wethInstance.address, scxInstance.address)
         const eye_dai = await factoryInstance.getPair(daiInstance.address, eyeInstance.address)
-        const eye_weth = await factoryInstance.getPair(daiInstance.address, eyeInstance.address) // for entrance
+        const eye_weth = await factoryInstance.getPair(wethInstance.address, eyeInstance.address) // for entrance
+
+        //register pairs with lachesis and behodler
+        const behodler2address = await get('behodler2')
+        const lachesis2address = await get('lachesis2')
+        console.log('behodler address: '+behodler2address)
+        console.log('lachesis address: '+lachesis2address)
+        
+        const behodlerInstance = new web3.eth.Contract(behodlerJSON.abi,behodler2address).methods
+        const lachesis2Instance= new web3.eth.Contract(lachesisSON.abi,lachesis2address).methods
+        
+        await lachesis2Instance.measure(scx_eye,true,false).send({from:accounts[0]})
+        await lachesis2Instance.updateBehodler(scx_eye).send({from:accounts[0]})
+        
+        await lachesis2Instance.measure(scx_weth,true,false).send({from:accounts[0]})
+        await lachesis2Instance.updateBehodler(scx_weth).send({from:accounts[0]})
+
+        await lachesis2Instance.measure(eye_dai,true,false).send({from:accounts[0]})
+        await lachesis2Instance.updateBehodler(eye_dai).send({from:accounts[0]})
+
+        console.log('eye dai '+eye_dai)
+
+        await lachesis2Instance.measure(eye_weth,true,false).send({from:accounts[0]})
+        await lachesis2Instance.updateBehodler(eye_weth).send({from:accounts[0]})
 
         await eyeInstance.mint(scx_eye, '1000000000000000000000')
         await scxInstance.mint(scx_eye, '20000000000000000000001')

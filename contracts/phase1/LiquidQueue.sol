@@ -247,7 +247,8 @@ contract LiquidQueue is Ownable {
             uint256 velocity,
             uint256 burnRatio,
             bool eyeActive,
-            uint256 eyeReward
+            uint256 eyeReward,
+            uint256 eyeHeight
         )
     {
         return (
@@ -257,7 +258,8 @@ contract LiquidQueue is Ownable {
             queueState.velocity,
             queueState.burnRatio,
             queueState.eyeActive,
-            queueConfig.eyeReward
+            queueConfig.eyeReward,
+            queueState.eyeHeight
         );
     }
 

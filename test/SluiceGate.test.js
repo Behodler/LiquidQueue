@@ -31,8 +31,8 @@ describe("SluiceGate", function () {
         sluiceGate = await sluiceFactory.deploy(scx_eye, eye_dai, eye.address)
     })
 
-    it('applying with invalid address does nothing', async function () {
-        await sluiceGate.betaApply(secondPerson.address)
+    it('applying with invalid address fails', async function () {
+        await expect(sluiceGate.betaApply(secondPerson.address)).to.be.revertedWith('LIQUID QUEUE: invalid token')
         expect(await sluiceGate.whitelist(owner.address)).to.be.false
     })
 

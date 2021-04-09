@@ -42,9 +42,11 @@ contract SluiceGate is Ownable {
     }
 
     function betaApply(address lp) public {
+        bool found = false;
         for (uint256 i = 0; i < 3; i++) {
             IERC20 currentLP = LPs[i].LP;
             if (address(currentLP) == lp) {
+                found = true;
                 uint256 balance = currentLP.balanceOf(msg.sender);
                 if (LPs[i].required == 0 && balance > 0) {
                     currentLP.transferFrom(
@@ -55,6 +57,7 @@ contract SluiceGate is Ownable {
                     LPstake[msg.sender][address(currentLP)] += balance / 10;
                     whitelist[msg.sender] = true;
                 } else if (LPs[i].required > 0) {
+                    found = true;
                     uint256 totalSupply = currentLP.totalSupply();
                     uint256 balanceOfUnderlyingToken =
                         IERC20(LPs[i].tokenToCheck).balanceOf(
@@ -64,12 +67,14 @@ contract SluiceGate is Ownable {
                         (LPs[i].required.mul(ONE)) / balanceOfUnderlyingToken;
                     uint256 lptokenBalanceRequired =
                         requiredShare.mul(totalSupply).div(ONE) - 1e17;
-
+                    //  require(balance>=lptok)
                     if (balance >= lptokenBalanceRequired) {
-                        currentLP.transferFrom(
-                            msg.sender,
-                            address(this),
-                            lptokenBalanceRequired
+                        require(
+                            currentLP.transferFrom(
+                                msg.sender,
+                                address(this),
+                                lptokenBalanceRequired
+                            )
                         );
                         LPstake[msg.sender][
                             address(currentLP)
@@ -77,9 +82,11 @@ contract SluiceGate is Ownable {
                         whitelist[msg.sender] = true;
                     }
                 }
+
                 return;
             }
         }
+        require(found, "LIQUID QUEUE: invalid token");
     }
 
     function unstake(address lp) public {
