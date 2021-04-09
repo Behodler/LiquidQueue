@@ -237,6 +237,12 @@ contract LiquidQueue is Ownable {
         queueState.lastIndex = queueState.lastIndex % newLength;
     }
 
+    //Only in BETA
+    function removeLP(address lp) public onlyOwner mustBePaused {
+        uint256 balance = IERC20(lp).balanceOf(address(this));
+        IERC20(lp).transfer(msg.sender, balance);
+    }
+
     function getQueueData()
         public
         view

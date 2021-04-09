@@ -563,4 +563,26 @@ describe("Liquid Queue", function () {
             await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
         }
     })
+
+    it("paused q can be drained of LP in beta", async function () {
+        await liquidQueue.configure(50000, 10, eye.address, 2000, 2, false)
+        await eye.mint(reward.address, ethers.utils.parseEther('1000'))
+        await dai.mint(owner.address, ethers.utils.parseEther('100'))
+        const daiEyePairAddress = await uniSwapFactory.getPair(dai.address, eye.address)
+        const daiEyePair = await ethers.getContractAt('UniswapV2Pair', daiEyePairAddress)
+        await dai.transfer(daiEyePairAddress, '100000000000000000000')
+        await eye.mint(daiEyePairAddress, '10000000000000000000')
+        daiEyePair.mint(secondPerson.address)
+
+        await dai.approve(mintingModule.address, ethers.utils.parseEther('10'))
+        await mintingModule.purchaseLP(dai.address, ethers.utils.parseEther('1'))
+
+        const balanceBeforeDrain = BigInt((await daiEyePair.balanceOf(liquidQueue.address)).toString())
+        await expect(liquidQueue.removeLP(daiEyePair.address)).to.be.revertedWith("LIQUID QUEUE: currently unpaused")
+        await liquidQueue.pause()
+        await liquidQueue.removeLP(daiEyePair.address)
+        const balanceAfterDrain = BigInt((await daiEyePair.balanceOf(liquidQueue.address)).toString())
+        console.log(`test: ${balanceBeforeDrain} and ${balanceAfterDrain}`)
+
+    })
 })
