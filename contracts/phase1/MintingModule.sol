@@ -139,7 +139,7 @@ contract MintingModule is Ownable {
             outputToken != address(0),
             "LIQUID QUEUE: input token not supported"
         );
-
+        amount= IERC20(inputToken).balanceOf(address(this));
         //The next section fetches a quote from uniswap so we know what the ratios should be in the absence of tilting.
         UniswapValues memory VARS;
 
@@ -169,7 +169,7 @@ contract MintingModule is Ownable {
 
         uint256 outputAmount = expectedOutputToken.mul(tiltAdjustment).div(100);
         rewardContract.requestReward(outputToken, outputAmount);
-
+        outputAmount = IERC20(outputToken).balanceOf(address(this));
         IERC20(inputToken).transfer(address(VARS.pair), amount);
         IERC20(outputToken).transfer(address(VARS.pair), outputAmount);
 

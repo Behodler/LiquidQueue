@@ -8,7 +8,7 @@ import "../facades/RewardLike.sol";
 /*
 RULES:
 1. A queue that has been stagnant for a set period of time starts rewarding EYE per queue place. Will use Nimrodel logic for this
-2. We measure queue velocity by taking a moving average. If it exceeds a threshold, new LP entrants are burnt. The burn increases for each entrant underwhich it exceeds the threshold
+2. We measure queue velocity by taking a moving average. If it exceeds a threshold, new LP entrants are burnt. The burn increases for each entrant under which it exceeds the threshold
 3. The queue is fixed in length but can be resized by admin. This is likely just a temporary measure. 
 */
 contract LiquidQueue is Ownable {
@@ -71,6 +71,7 @@ contract LiquidQueue is Ownable {
 
     constructor() {
         queueState.eyeActive = true;
+        queueConfig.LPburnDisabled = true;
     }
 
     function setReward(address r) public onlyOwner {
@@ -150,7 +151,7 @@ contract LiquidQueue is Ownable {
                             .durationSinceLast + 1)) / queueConfig.size;
                 uint256 existingVelocity = queueState.velocity;
                 queueState.velocity = existingVelocity < leavingVelocity
-                    ? 0 //queueState.velocity
+                    ? 0 //avoid underflow
                     : existingVelocity - leavingVelocity;
             }
 
